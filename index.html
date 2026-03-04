@@ -1,332 +1,79 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>FRC 2026 Shift Timer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Churrobots</title>
   <style>
-    :root {
-      --party: #19c37d;
-      /* green */
-      --score: #7c3aed;
-      /* violet */
-      --gather: #000000;
-      /* black */
-      --text: #ffffff;
-    }
-
-    html,
-    body {
-      height: 100%;
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
 
     body {
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: #111;
-      color: var(--text);
-      overflow: hidden;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body.splash .centerStack,
-    body.splash .totalTime {
-      display: none;
-    }
-
-    .screen {
-      position: fixed;
-      inset: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-      transition: background-color 140ms linear;
+      padding: 20px;
     }
 
-    .countdown {
-      font-size: clamp(64px, 18vw, 150px);
-      font-weight: 900;
-      letter-spacing: 0.02em;
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .centerStack {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      text-shadow: 0 6px 18px rgba(0, 0, 0, .55);
-      pointer-events: none;
-    }
-
-    /* BIG mode label */
-    .mode {
-      font-weight: 900;
-      font-size: clamp(22px, 6.5vw, 40px);
-      letter-spacing: 0.06em;
-      line-height: 1;
-      opacity: .98;
-      text-transform: uppercase;
-    }
-
-    .totalTime {
-      position: absolute;
-      top: 14px;
-      left: 16px;
-      font-weight: 800;
-      font-size: clamp(14px, 4vw, 22px);
-      letter-spacing: 0.03em;
-      text-shadow: 0 3px 10px rgba(0, 0, 0, .55);
-      pointer-events: none;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .branding {
-      position: absolute;
-      right: 16px;
-      bottom: 12px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      opacity: 0.8;
-      text-shadow: 0 3px 10px rgba(0, 0, 0, .55);
-      pointer-events: none;
-    }
-
-    /* Smooth blink/pulse during last 5 seconds */
-    @keyframes softBlink {
-      0% {
-        opacity: 1;
-        transform: scale(1);
-      }
-
-      50% {
-        opacity: .28;
-        transform: scale(0.985);
-      }
-
-      100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    .blink {
-      animation: softBlink 0.85s ease-in-out infinite;
-      transform-origin: top right;
-    }
-
-    .controls {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 14px;
-      padding: 24px;
-      background: rgba(0, 0, 0, .55);
-      backdrop-filter: blur(6px);
-    }
-
-    .logo {
-      width: min(420px, 82vw);
-      margin-bottom: 6px;
-    }
-
-    .logo svg {
-      display: block;
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      padding: 40px 30px;
+      max-width: 500px;
       width: 100%;
-      height: auto;
     }
 
-    button {
-      width: min(520px, 92vw);
-      padding: 18px 18px;
-      border-radius: 14px;
-      border: 0;
-      font-size: 20px;
-      font-weight: 900;
-      color: #fff;
-      background: #2563eb;
-      cursor: pointer;
-      box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 28px;
     }
 
-    button.secondary {
-      background: #334155;
+    .links-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    button:active {
-      transform: scale(0.99);
+    a {
+      display: block;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    a:active {
+      transform: scale(0.98);
+    }
+
+    a:hover {
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
     }
   </style>
 </head>
 
-<body class="splash">
-  <div id="screen" class="screen" style="background:var(--gather);">
-    <div id="totalCountdown" class="totalTime">2:40</div>
-    <div class="centerStack">
-      <div id="modeText" class="mode">GATHER</div>
-      <div id="shiftCountdown" class="countdown">2:40</div>
-    </div>
-    <div class="branding">Made with ♡ from the Churrobots Team 8048</div>
-
-    <div id="controls" class="controls">
-      <div class="logo" aria-label="2026 FRC Rebuilt logo">
-        <svg viewBox="0 0 520 140" role="img" aria-hidden="true">
-          <defs>
-            <linearGradient id="rebuilt-grad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#19c37d" />
-              <stop offset="100%" stop-color="#7c3aed" />
-            </linearGradient>
-          </defs>
-          <rect x="12" y="12" width="496" height="116" rx="18" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="3" />
-          <text x="36" y="62" font-size="36" font-weight="800" fill="#ffffff" letter-spacing="3">2026 FRC</text>
-          <text x="36" y="108" font-size="52" font-weight="900" fill="url(#rebuilt-grad)" letter-spacing="2">REBUILT</text>
-        </svg>
-      </div>
-      <button id="wonBtn">Won Auto</button>
-      <button id="lostBtn" class="secondary">Lost Auto</button>
+<body>
+  <div class="container">
+    <h1>Churrobots</h1>
+    <div class="links-list">
+      <a href="2026-rebuilt-match-timer">2026 Rebuilt - Match Timer</a>
     </div>
   </div>
-
-  <script>
-    (() => {
-      // Match model (seconds)
-      const AUTO = 20;               // 0:20
-      const AUTO_TO_TELEOP_DELAY = 3;// delay
-      const TRANSITION = 10;         // both active
-      const SHIFT = 25;              // 4 shifts
-      const NUM_SHIFTS = 4;
-      const ENDGAME = 30;
-
-      const TOTAL = AUTO + AUTO_TO_TELEOP_DELAY + TRANSITION + (SHIFT * NUM_SHIFTS) + ENDGAME; // 160 = 2:40
-
-      const screen = document.getElementById("screen");
-      const controls = document.getElementById("controls");
-      const modeText = document.getElementById("modeText");
-      const shiftCountdownEl = document.getElementById("shiftCountdown");
-      const totalCountdownEl = document.getElementById("totalCountdown");
-
-      const COLORS = {
-        party: "var(--party)",
-        score: "var(--score)",
-        gather: "var(--gather)"
-      };
-
-      function labelForKind(kind) {
-        return kind.toUpperCase();
-      }
-
-      // Build timeline as segments: {name, kind, durSeconds}
-      // Perspective: Won Auto => your hub INACTIVE first shift; Lost Auto => your hub ACTIVE first shift.
-      function buildSegments(wonAuto) {
-        const segs = [];
-        // segs.push({ name:"AUTO", kind:"score", dur:AUTO });
-        // segs.push({ name:"AUTO→TELEOP DELAY", kind:"gather", dur:AUTO_TO_TELEOP_DELAY });
-        segs.push({ name: "TRANSITION", kind: "party", dur: TRANSITION });
-
-        let activeFirst = !wonAuto; // lost auto => you score first
-        for (let i = 0; i < NUM_SHIFTS; i++) {
-          const isActive = (i % 2 === 0) ? activeFirst : !activeFirst;
-          segs.push({ name: `SHIFT ${i + 1}`, kind: isActive ? "score" : "gather", dur: SHIFT });
-        }
-
-        segs.push({ name: "ENDGAME", kind: "party", dur: ENDGAME });
-        return segs;
-      }
-
-      function fmtTime(sec) {
-        sec = Math.max(0, Math.ceil(sec));
-        const m = Math.floor(sec / 60);
-        const s = sec - m * 60;
-        return `${m}:${String(s).padStart(2, "0")}`;
-      }
-
-      let raf = null;
-      let startTs = 0;
-      let segments = [];
-
-      function currentSegmentAt(t) {
-        let acc = 0;
-        for (const seg of segments) {
-          if (t < acc + seg.dur) return { seg, segElapsed: t - acc, segRemaining: (acc + seg.dur) - t };
-          acc += seg.dur;
-        }
-        return { seg: null, segElapsed: 0, segRemaining: 0 };
-      }
-
-      function setKind(kind) {
-        screen.style.background = COLORS[kind] || COLORS.gather;
-      }
-
-      async function tryWakeLock() {
-        try {
-          if ("wakeLock" in navigator) {
-            await navigator.wakeLock.request("screen");
-          }
-        } catch (e) { /* ignore */ }
-      }
-
-      function tick(now) {
-        const elapsed = (now - startTs) / 1000;
-        const remaining = TOTAL - elapsed;
-        totalCountdownEl.textContent = fmtTime(remaining);
-
-        const { seg, segRemaining } = currentSegmentAt(elapsed);
-        if (!seg) {
-          screen.style.background = COLORS.gather;
-          modeText.textContent = "READY";
-          shiftCountdownEl.textContent = "0:00";
-          shiftCountdownEl.classList.remove("blink");
-          controls.style.display = "flex";
-          document.body.classList.add("splash");
-          cancelAnimationFrame(raf);
-          raf = null;
-          return;
-        }
-
-        setKind(seg.kind);
-        modeText.textContent = seg.kind === "party" ? seg.name : labelForKind(seg.kind);
-        shiftCountdownEl.textContent = fmtTime(segRemaining);
-
-        // Blink last 8 seconds of the current segment
-        // If you ONLY want blinking on the 25s SHIFT segments, change this to:
-        // const shouldBlink = seg.name.startsWith("SHIFT") && segRemaining <= 8.0;
-        const shouldBlink = segRemaining <= 8.0;
-
-        if (shouldBlink) shiftCountdownEl.classList.add("blink");
-        else shiftCountdownEl.classList.remove("blink");
-
-        raf = requestAnimationFrame(tick);
-      }
-
-      function start(wonAuto) {
-        segments = buildSegments(wonAuto);
-        controls.style.display = "none";
-        document.body.classList.remove("splash");
-        startTs = performance.now();
-        tryWakeLock();
-        if (raf) cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(tick);
-      }
-
-      document.getElementById("wonBtn").addEventListener("click", () => start(true));
-      document.getElementById("lostBtn").addEventListener("click", () => start(false));
-
-      // Initial display
-      totalCountdownEl.textContent = fmtTime(TOTAL);
-      screen.style.background = COLORS.gather;
-      modeText.textContent = "GATHER";
-      shiftCountdownEl.textContent = fmtTime(TOTAL);
-    })();
-  </script>
 </body>
 
 </html>
