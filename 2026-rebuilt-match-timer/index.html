@@ -36,6 +36,12 @@
       display: none;
     }
 
+    body.gameover .centerStack,
+    body.gameover .totalTime,
+    body.gameover .startOver {
+      display: none;
+    }
+
     body.splash #screen {
       background: #000 !important;
     }
@@ -66,6 +72,14 @@
       gap: 10px;
       text-shadow: 0 6px 18px rgba(0, 0, 0, .55);
       pointer-events: none;
+    }
+
+    .shiftLabel {
+      font-weight: 800;
+      font-size: clamp(14px, 4.6vw, 22px);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.85;
     }
 
     /* BIG mode label */
@@ -101,6 +115,34 @@
       opacity: 0.8;
       text-shadow: 0 3px 10px rgba(0, 0, 0, .55);
       pointer-events: none;
+    }
+
+    .gameOver {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      background: rgba(0, 0, 0, 0.72);
+      text-align: center;
+      text-shadow: 0 6px 18px rgba(0, 0, 0, .55);
+    }
+
+    .gameOver.show {
+      display: flex;
+    }
+
+    .gameOver h2 {
+      font-size: clamp(34px, 10vw, 72px);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .gameOver p {
+      font-size: clamp(14px, 4.2vw, 18px);
+      opacity: 0.85;
     }
 
     .startOver {
@@ -204,11 +246,16 @@
   <div id="screen" class="screen" style="background:var(--gather);">
     <div id="totalCountdown" class="totalTime">2:40</div>
     <div class="centerStack">
+      <div id="shiftLabel" class="shiftLabel"></div>
       <div id="modeText" class="mode">GATHER</div>
       <div id="shiftCountdown" class="countdown">2:40</div>
     </div>
     <button id="startOverBtn" class="startOver" aria-label="Start over">Reset</button>
     <div class="branding">Made with ♡ from the Churrobots Team 8048</div>
+    <div id="gameOver" class="gameOver" role="button" aria-label="Game over. Tap to return.">
+      <h2>Game Over</h2>
+      <p>Tap to return</p>
+    </div>
 
     <div id="controls" class="controls">
       <div class="logo" aria-label="2026 FRC Rebuilt logo">
@@ -245,7 +292,9 @@
 
       const screen = document.getElementById("screen");
       const controls = document.getElementById("controls");
+      const gameOverEl = document.getElementById("gameOver");
       const modeText = document.getElementById("modeText");
+      const shiftLabelEl = document.getElementById("shiftLabel");
       const shiftCountdownEl = document.getElementById("shiftCountdown");
       const totalCountdownEl = document.getElementById("totalCountdown");
 
@@ -320,14 +369,16 @@
           modeText.textContent = "READY";
           shiftCountdownEl.textContent = "0:00";
           shiftCountdownEl.classList.remove("blink");
-          controls.style.display = "flex";
-          document.body.classList.add("splash");
+          controls.style.display = "none";
+          gameOverEl.classList.add("show");
+          document.body.classList.add("gameover");
           cancelAnimationFrame(raf);
           raf = null;
           return;
         }
 
         setKind(seg.kind);
+        shiftLabelEl.textContent = seg.name.startsWith("SHIFT") ? seg.name : "";
         modeText.textContent = seg.kind === "party" ? seg.name : labelForKind(seg.kind);
         shiftCountdownEl.textContent = fmtTime(segRemaining);
 
@@ -346,6 +397,8 @@
         segments = buildSegments(wonAuto);
         controls.style.display = "none";
         document.body.classList.remove("splash");
+        document.body.classList.remove("gameover");
+        gameOverEl.classList.remove("show");
         startTs = performance.now();
         tryWakeLock();
         if (raf) cancelAnimationFrame(raf);
@@ -357,15 +410,19 @@
         raf = null;
         screen.style.background = COLORS.gather;
         modeText.textContent = "GATHER";
+        shiftLabelEl.textContent = "";
         shiftCountdownEl.textContent = fmtTime(TOTAL);
         totalCountdownEl.textContent = fmtTime(TOTAL);
         controls.style.display = "flex";
         document.body.classList.add("splash");
+        document.body.classList.remove("gameover");
+        gameOverEl.classList.remove("show");
       }
 
       document.getElementById("wonBtn").addEventListener("click", () => start(true));
       document.getElementById("lostBtn").addEventListener("click", () => start(false));
       document.getElementById("startOverBtn").addEventListener("click", resetToSplash);
+      gameOverEl.addEventListener("click", resetToSplash);
 
       // Initial display
       resetToSplash();
