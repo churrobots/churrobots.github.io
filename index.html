@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>FRC 2026 Shift Timer</title>
+  <style>
+    :root {
+      --party: #19c37d;
+      /* green */
+      --score: #7c3aed;
+      /* violet */
+      --gather: #000000;
+      /* black */
+      --text: #ffffff;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: #111;
+      color: var(--text);
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      transition: background-color 140ms linear;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      text-shadow: 0 6px 18px rgba(0, 0, 0, .55);
+    }
+
+    .countdown {
+      font-size: clamp(64px, 18vw, 150px);
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+
+    .hud {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, .55);
+      pointer-events: none;
+    }
+
+    .phaseName {
+      font-weight: 900;
+      font-size: clamp(14px, 4.2vw, 20px);
+      opacity: .95;
+    }
+
+    /* BIG mode label */
+    .mode {
+      font-weight: 1000;
+      font-size: clamp(30px, 9vw, 54px);
+      letter-spacing: 0.06em;
+      line-height: 1;
+      opacity: .98;
+      text-transform: uppercase;
+    }
+
+    .mode small {
+      display: block;
+      margin-top: 6px;
+      font-size: clamp(12px, 3.8vw, 16px);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      opacity: .9;
+      text-align: right;
+    }
+
+    /* Smooth blink/pulse during last 5 seconds */
+    @keyframes softBlink {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: .28;
+        transform: scale(0.985);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .blink {
+      animation: softBlink 0.85s ease-in-out infinite;
+      transform-origin: top right;
+    }
+
+    .controls {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      padding: 24px;
+      background: rgba(0, 0, 0, .55);
+      backdrop-filter: blur(6px);
+    }
+
+    button {
+      width: min(520px, 92vw);
+      padding: 18px 18px;
+      border-radius: 14px;
+      border: 0;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      background: #2563eb;
+      cursor: pointer;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
+    }
+
+    button.secondary {
+      background: #334155;
+    }
+
+    button:active {
+      transform: scale(0.99);
+    }
+
+    .hint {
+      max-width: 520px;
+      text-align: center;
+      opacity: .9;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="screen" class="screen" style="background:var(--gather);">
+    <div class="hud">
+      <div id="phaseName" class="phaseName">Ready</div>
+      <div id="modeBox" class="mode">
+        <span id="modeText">GATHER</span>
+        <small id="segRemain">2:40</small>
+      </div>
+    </div>
+
+    <div class="overlay">
+      <div id="countdown" class="countdown">2:40</div>
+    </div>
+
+    <div id="controls" class="controls">
+      <button id="wonBtn">Won Auto</button>
+      <button id="lostBtn" class="secondary">Lost Auto</button>
+      <div class="hint">
+        Colors: <b style="color:var(--party)">PARTY (green)</b> = transition + endgame,
+        <b style="color:var(--score)">SCORE (violet)</b> = your hub active,
+        <b>GATHER (black)</b> = your hub inactive.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // Match model (seconds)
+      const AUTO = 20;               // 0:20
+      const AUTO_TO_TELEOP_DELAY = 3;// delay
+      const TRANSITION = 10;         // both active
+      const SHIFT = 25;              // 4 shifts
+      const NUM_SHIFTS = 4;
+      const ENDGAME = 30;
+
+      const TOTAL = AUTO + AUTO_TO_TELEOP_DELAY + TRANSITION + (SHIFT * NUM_SHIFTS) + ENDGAME; // 160 = 2:40
+
+      const screen = document.getElementById("screen");
+      const countdownEl = document.getElementById("countdown");
+      const controls = document.getElementById("controls");
+      const phaseName = document.getElementById("phaseName");
+      const modeText = document.getElementById("modeText");
+      const segRemainEl = document.getElementById("segRemain");
+      const modeBox = document.getElementById("modeBox");
+
+      const COLORS = {
+        party: "var(--party)",
+        score: "var(--score)",
+        gather: "var(--gather)"
+      };
+
+      function labelForKind(kind) {
+        return kind.toUpperCase();
+      }
+
+      // Build timeline as segments: {name, kind, durSeconds}
+      // Perspective: Won Auto => your hub INACTIVE first shift; Lost Auto => your hub ACTIVE first shift.
+      function buildSegments(wonAuto) {
+        const segs = [];
+        // segs.push({ name:"AUTO", kind:"score", dur:AUTO });
+        // segs.push({ name:"AUTO→TELEOP DELAY", kind:"gather", dur:AUTO_TO_TELEOP_DELAY });
+        segs.push({ name: "TRANSITION", kind: "party", dur: TRANSITION });
+
+        let activeFirst = !wonAuto; // lost auto => you score first
+        for (let i = 0; i < NUM_SHIFTS; i++) {
+          const isActive = (i % 2 === 0) ? activeFirst : !activeFirst;
+          segs.push({ name: `SHIFT ${i + 1}`, kind: isActive ? "score" : "gather", dur: SHIFT });
+        }
+
+        segs.push({ name: "ENDGAME", kind: "party", dur: ENDGAME });
+        return segs;
+      }
+
+      function fmtTime(sec) {
+        sec = Math.max(0, Math.ceil(sec));
+        const m = Math.floor(sec / 60);
+        const s = sec - m * 60;
+        return `${m}:${String(s).padStart(2, "0")}`;
+      }
+
+      let raf = null;
+      let startTs = 0;
+      let segments = [];
+
+      function currentSegmentAt(t) {
+        let acc = 0;
+        for (const seg of segments) {
+          if (t < acc + seg.dur) return { seg, segElapsed: t - acc, segRemaining: (acc + seg.dur) - t };
+          acc += seg.dur;
+        }
+        return { seg: null, segElapsed: 0, segRemaining: 0 };
+      }
+
+      function setKind(kind) {
+        screen.style.background = COLORS[kind] || COLORS.gather;
+        modeText.textContent = labelForKind(kind);
+      }
+
+      async function tryWakeLock() {
+        try {
+          if ("wakeLock" in navigator) {
+            await navigator.wakeLock.request("screen");
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      function tick(now) {
+        const elapsed = (now - startTs) / 1000;
+        const remaining = TOTAL - elapsed;
+        countdownEl.textContent = fmtTime(remaining);
+
+        const { seg, segRemaining } = currentSegmentAt(elapsed);
+        if (!seg) {
+          screen.style.background = COLORS.gather;
+          phaseName.textContent = "DONE";
+          modeText.textContent = "READY";
+          segRemainEl.textContent = "0:00";
+          modeBox.classList.remove("blink");
+          controls.style.display = "flex";
+          cancelAnimationFrame(raf);
+          raf = null;
+          return;
+        }
+
+        setKind(seg.kind);
+        phaseName.textContent = seg.name;
+        segRemainEl.textContent = fmtTime(segRemaining);
+
+        // Blink last 5 seconds of the current segment
+        // If you ONLY want blinking on the 25s SHIFT segments, change this to:
+        // const shouldBlink = seg.name.startsWith("SHIFT") && segRemaining <= 5.0;
+        const shouldBlink = segRemaining <= 5.0;
+
+        if (shouldBlink) modeBox.classList.add("blink");
+        else modeBox.classList.remove("blink");
+
+        raf = requestAnimationFrame(tick);
+      }
+
+      function start(wonAuto) {
+        segments = buildSegments(wonAuto);
+        controls.style.display = "none";
+        startTs = performance.now();
+        tryWakeLock();
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(tick);
+      }
+
+      document.getElementById("wonBtn").addEventListener("click", () => start(true));
+      document.getElementById("lostBtn").addEventListener("click", () => start(false));
+
+      // Initial display
+      countdownEl.textContent = fmtTime(TOTAL);
+      screen.style.background = COLORS.gather;
+      modeText.textContent = "GATHER";
+      segRemainEl.textContent = fmtTime(TOTAL);
+    })();
+  </script>
+</body>
+
+</html>
